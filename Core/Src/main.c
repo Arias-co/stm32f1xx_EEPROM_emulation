@@ -94,8 +94,11 @@ int main( void )
 
 
     /**
-     *  NOTA: al hacer el debug paso a paso podremos observar
-     *        como cambian los valores de la variable -> datoGuardado.
+     *  NOTA_1: al hacer el debug paso a paso podremos observar
+     *          como cambian los valores de la variable -> datoGuardado.
+     *  NOTA_2: debes reservar memoria flash en el archivo STM32F103C8TX_FLASH.ld
+     *          disminuyendo la memoria de 64K a 63K, con esto aseguramos que el
+     *          compilador no sobreescriba en la pagina de memoria que reservamos.
      */
 
 
