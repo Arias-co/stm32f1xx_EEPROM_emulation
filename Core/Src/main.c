@@ -8,7 +8,6 @@
  *
  * <h2><center>&copy; Copyright (c) 2020 STMicroelectronics.
  * All rights reserved.</center></h2>
- *
  * This software component is licensed by ST under BSD 3-Clause license,
  * the "License"; You may not use this file except in compliance with the
  * License. You may obtain a copy of the License at:
@@ -32,6 +31,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -42,7 +42,18 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint32_t datoGuardado;
+
+/********* ejemplo con con datos de 16 bits ***********/
+
+#define EJEMPLO_1
+uint16_t datoGuardado;
+
+/********* ejemplo con con datos de 32 bits ***********/
+
+//#define EJEMPLO_2
+//uint32_t datoGuardado;
+/*******************************************************/
+
 uint32_t direccionFlash = 0x0800FC00UL; //primera direccion de la ultima pagina
 /* USER CODE END PV */
 
@@ -51,9 +62,13 @@ void SystemClock_Config( void );
 static void MX_GPIO_Init( void );
 /* USER CODE BEGIN PFP */
 
-void     flash_writeData32( uint32_t address, uint32_t dato );
-void     flash_erasedPag( uint32_t address, uint8_t numPag );
+void flash_writeData32( uint32_t address, uint32_t data );
+void flash_writeData16( uint32_t address, uint16_t data );
+
+void flash_erasedPag( uint32_t address, uint8_t numPag );
+
 uint32_t flash_readData32( uint32_t address );
+uint16_t flash_readData16( uint32_t address );
 
 /* USER CODE END PFP */
 
@@ -92,7 +107,6 @@ int main( void )
     MX_GPIO_Init();
     /* USER CODE BEGIN 2 */
 
-
     /**
      *  NOTA_1: al hacer el debug paso a paso podremos observar
      *          como cambian los valores de la variable -> datoGuardado.
@@ -101,24 +115,43 @@ int main( void )
      *          compilador no sobreescriba en la pagina de memoria que reservamos.
      */
 
-
-    /* leemos los datos guardados en la direccion de memoria
-     * antes de borrarla.
-     */
-    datoGuardado = flash_readData32( direccionFlash );
-    datoGuardado = flash_readData32( direccionFlash + 4 );
+#ifdef EJEMPLO_1  /********* ejemplo con con datos de 16 bits ***********/
 
     /* borramos la ultima pagina de la flash */
     flash_erasedPag( direccionFlash, 1 );
+    /* leemos las direcciones de memoria para verificar que esten borradas
+     * volor despues de borrar el registro de la flash 0xffffffff
+     */
+    datoGuardado = flash_readData16( direccionFlash );
+    datoGuardado = flash_readData16( direccionFlash + 2 );
 
-    /* guardamos 2 valores en la flash 78787878 y 2323232 */
-    flash_writeData32( direccionFlash, 78787878 );
-    flash_writeData32( direccionFlash + 4, 2323232 );
-
+    /* guardamos 2 valores en la flash 7878 y 23232 */
+    flash_writeData16( direccionFlash, 7878 );         // dato 1
+    flash_writeData16( direccionFlash + 2, 23232 );    // dato 2
     /* leemos los datos guardados */
-    datoGuardado = flash_readData32( direccionFlash );
-    datoGuardado = flash_readData32( direccionFlash + 4 );
+    datoGuardado = flash_readData16( direccionFlash );
+    datoGuardado = flash_readData16( direccionFlash + 2 );
 
+#else             /********* ejemplo con con datos de 32 bits ***********/
+
+       /* borramos la ultima pagina de la flash */
+       flash_erasedPag( direccionFlash, 1 );
+
+       /* leemos las direcciones de memoria para verificar que esten borradas
+        * volor despues de borrar el registro de la flash 0xffffffff
+        */
+       datoGuardado = flash_readData32( direccionFlash );
+       datoGuardado = flash_readData32( direccionFlash + 4 );
+
+       /* guardamos 2 valores en la flash 1234567 y 6789012 */
+       flash_writeData32( direccionFlash, 1234567 );      // dato 1
+       flash_writeData32( direccionFlash + 4, 6789012 );  // dato 2
+       /* leemos los datos guardados */
+       datoGuardado = flash_readData32( direccionFlash );
+       datoGuardado = flash_readData32( direccionFlash + 4 );
+
+
+#endif
     /* USER CODE END 2 */
 
     /* Infinite loop */
@@ -204,7 +237,7 @@ static void MX_GPIO_Init( void )
 /**
  *
  * @param address direccion donde se guardara el dato
- * @param data dato para almacenar en la memoria
+ * @param data dato de 32bits para almacenar en la memoria
  */
 void flash_writeData32( uint32_t address, uint32_t data )
 {
@@ -223,13 +256,46 @@ void flash_writeData32( uint32_t address, uint32_t data )
 
 /**
  *
+ * @param address direccion donde se guardara el dato
+ * @param data dato de 16bits para almacenar en la memoria
+ */
+void flash_writeData16( uint32_t address, uint16_t data )
+{
+
+    HAL_FLASH_Unlock();
+    HAL_FLASH_OB_Unlock();
+
+    if ( HAL_FLASH_Program( FLASH_TYPEPROGRAM_HALFWORD, address, data )
+            != HAL_OK )
+    {
+
+    }
+
+    HAL_FLASH_OB_Lock();
+    HAL_FLASH_Lock();
+}
+
+/**
+ *
  * @param address direccion de la flash
- * @return retorna el dato guardado en la flash
+ * @return retorna el dato de 32bits guardado en la flash
  */
 uint32_t flash_readData32( uint32_t address )
 {
 
     return *(uint32_t*) address;
+
+}
+
+/**
+ *
+ * @param address direccion de la flash
+ * @return retorna el dato de 16bits guardado en la flash
+ */
+uint16_t flash_readData16( uint32_t address )
+{
+    uint16_t dato = *(uint32_t*) address;
+    return dato;
 
 }
 
