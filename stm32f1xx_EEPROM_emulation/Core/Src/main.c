@@ -43,18 +43,34 @@
 
 /* USER CODE BEGIN PV */
 
+/**
+ *  NOTA: se realizaron modificaciones en el archivo "STM32F103C8TX_FLASH.ld"
+ *        en la definicion de memoria y en las secciones.
+ */
+
+#define EJEMPLO_2
+
+#ifdef EJEMPLO_1
 /********* ejemplo con con datos de 16 bits ***********/
+uint16_t EEPROM_registerEmulate_1 __attribute__((__section__(".user_flash")));
+uint16_t EEPROM_registerEmulate_2 __attribute__((__section__(".user_flash")));
 
-#define EJEMPLO_1
-uint16_t datoGuardado;
+uint16_t dato_1 , dato_2 ;
 
+#else
 /********* ejemplo con con datos de 32 bits ***********/
 
 //#define EJEMPLO_2
-//uint32_t datoGuardado;
+
+uint32_t EEPROM_registerEmulate_1 __attribute__((__section__(".user_flash")));
+uint32_t EEPROM_registerEmulate_2 __attribute__((__section__(".user_flash")));
+
+uint32_t dato_1 , dato_2 ;
+#endif
 /*******************************************************/
 
-uint32_t direccionFlash = 0x0800FC00UL; //primera direccion de la ultima pagina
+uint32_t page_63 = 0x0800FC00UL; //primera direccion de la ultima pagina
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -62,13 +78,10 @@ void SystemClock_Config( void );
 static void MX_GPIO_Init( void );
 /* USER CODE BEGIN PFP */
 
-void flash_writeData32( uint32_t address, uint32_t data );
-void flash_writeData16( uint32_t address, uint16_t data );
+void flash_writeData32( uint32_t *pRegister, uint32_t data );
+void flash_writeData16( uint16_t *pRegister, uint16_t data );
 
 void flash_erasedPag( uint32_t address, uint8_t numPag );
-
-uint32_t flash_readData32( uint32_t address );
-uint16_t flash_readData16( uint32_t address );
 
 /* USER CODE END PFP */
 
@@ -118,38 +131,37 @@ int main( void )
 #ifdef EJEMPLO_1  /********* ejemplo con con datos de 16 bits ***********/
 
     /* borramos la ultima pagina de la flash */
-    flash_erasedPag( direccionFlash, 1 );
+    flash_erasedPag( page_63, 1 );
     /* leemos las direcciones de memoria para verificar que esten borradas
      * volor despues de borrar el registro de la flash 0xffffffff
      */
-    datoGuardado = flash_readData16( direccionFlash );
-    datoGuardado = flash_readData16( direccionFlash + 2 );
+    dato_1 = EEPROM_registerEmulate_1;
+    dato_2 = EEPROM_registerEmulate_2;
 
     /* guardamos 2 valores en la flash 7878 y 23232 */
-    flash_writeData16( direccionFlash, 7878 );         // dato 1
-    flash_writeData16( direccionFlash + 2, 23232 );    // dato 2
+    flash_writeData16( &EEPROM_registerEmulate_1, 7878 );     // dato 1
+    flash_writeData16( &EEPROM_registerEmulate_2, 23232 );    // dato 2
     /* leemos los datos guardados */
-    datoGuardado = flash_readData16( direccionFlash );
-    datoGuardado = flash_readData16( direccionFlash + 2 );
+    dato_1 = EEPROM_registerEmulate_1;
+    dato_2 = EEPROM_registerEmulate_2;
 
 #else             /********* ejemplo con con datos de 32 bits ***********/
 
        /* borramos la ultima pagina de la flash */
-       flash_erasedPag( direccionFlash, 1 );
+       flash_erasedPag( page_63, 1 );
 
        /* leemos las direcciones de memoria para verificar que esten borradas
         * volor despues de borrar el registro de la flash 0xffffffff
         */
-       datoGuardado = flash_readData32( direccionFlash );
-       datoGuardado = flash_readData32( direccionFlash + 4 );
+       dato_1 = EEPROM_registerEmulate_1;
+       dato_2 = EEPROM_registerEmulate_2;
 
        /* guardamos 2 valores en la flash 1234567 y 6789012 */
-       flash_writeData32( direccionFlash, 1234567 );      // dato 1
-       flash_writeData32( direccionFlash + 4, 6789012 );  // dato 2
+       flash_writeData32( &EEPROM_registerEmulate_1, 1234567 );  // dato 1
+       flash_writeData32( &EEPROM_registerEmulate_2, 6789012 );  // dato 2
        /* leemos los datos guardados */
-       datoGuardado = flash_readData32( direccionFlash );
-       datoGuardado = flash_readData32( direccionFlash + 4 );
-
+       dato_1 = EEPROM_registerEmulate_1;
+       dato_2 = EEPROM_registerEmulate_2;
 
 #endif
     /* USER CODE END 2 */
@@ -239,13 +251,13 @@ static void MX_GPIO_Init( void )
  * @param address direccion donde se guardara el dato
  * @param data dato de 32bits para almacenar en la memoria
  */
-void flash_writeData32( uint32_t address, uint32_t data )
+void flash_writeData32( uint32_t *pRegister, uint32_t data )
 {
 
     HAL_FLASH_Unlock();
     HAL_FLASH_OB_Unlock();
 
-    if ( HAL_FLASH_Program( FLASH_TYPEPROGRAM_WORD, address, data ) != HAL_OK )
+    if ( HAL_FLASH_Program( FLASH_TYPEPROGRAM_WORD, (uint32_t) pRegister, data ) != HAL_OK )
     {
 
     }
@@ -259,13 +271,13 @@ void flash_writeData32( uint32_t address, uint32_t data )
  * @param address direccion donde se guardara el dato
  * @param data dato de 16bits para almacenar en la memoria
  */
-void flash_writeData16( uint32_t address, uint16_t data )
+void flash_writeData16( uint16_t *pRegister, uint16_t data )
 {
 
     HAL_FLASH_Unlock();
     HAL_FLASH_OB_Unlock();
 
-    if ( HAL_FLASH_Program( FLASH_TYPEPROGRAM_HALFWORD, address, data )
+    if ( HAL_FLASH_Program( FLASH_TYPEPROGRAM_HALFWORD, (uint32_t) pRegister, data )
             != HAL_OK )
     {
 
@@ -273,30 +285,6 @@ void flash_writeData16( uint32_t address, uint16_t data )
 
     HAL_FLASH_OB_Lock();
     HAL_FLASH_Lock();
-}
-
-/**
- *
- * @param address direccion de la flash
- * @return retorna el dato de 32bits guardado en la flash
- */
-uint32_t flash_readData32( uint32_t address )
-{
-
-    return *(uint32_t*) address;
-
-}
-
-/**
- *
- * @param address direccion de la flash
- * @return retorna el dato de 16bits guardado en la flash
- */
-uint16_t flash_readData16( uint32_t address )
-{
-    uint16_t dato = *(uint32_t*) address;
-    return dato;
-
 }
 
 /**

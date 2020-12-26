@@ -38,11 +38,21 @@ MEMORY
 {
   RAM    (xrw)    : ORIGIN = 0x20000000,   LENGTH = 20K
   FLASH    (rx)    : ORIGIN = 0x8000000,   LENGTH = 63K
+  USER_FLASH (xrw)	: ORIGIN = 0x0800FC00, LENGTH = 1K
 }
 
 /* Sections */
 SECTIONS
 {
+
+ .user_flash :
+  {
+    . = ALIGN(4);
+    *(.user_flash)		/* .user_data_flash sections */
+    *(.user_flash*)	/* .user_data_flash sections */
+    . = ALIGN(4);
+  } >USER_FLASH
+  
   /* The startup code into "FLASH" Rom type memory */
   .isr_vector :
   {
